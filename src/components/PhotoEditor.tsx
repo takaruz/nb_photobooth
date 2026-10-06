@@ -14,12 +14,24 @@ interface Props {
   onMove: (dir: -1 | 1, crop: Crop) => void
   onReplace: () => void
   onRemove: () => void
+  onRotate: () => void
 }
 
 // About 2x the print cell size, so it stays sharp on retina screens.
 const EDIT_W = 1040
 
-export function PhotoEditor({ photo, index, count, aspect, filter, onDone, onMove, onReplace, onRemove }: Props) {
+export function PhotoEditor({
+  photo,
+  index,
+  count,
+  aspect,
+  filter,
+  onDone,
+  onMove,
+  onReplace,
+  onRemove,
+  onRotate,
+}: Props) {
   const img = photo.image
   const [crop, setCrop] = useState(photo.crop)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -114,9 +126,14 @@ export function PhotoEditor({ photo, index, count, aspect, filter, onDone, onMov
       >
         <div className="modal-head">
           <h2>Photo {index + 1}</h2>
-          <button type="button" className="btn btn-primary btn-small" onClick={() => onDone(crop)}>
-            Done
-          </button>
+          <div className="modal-head-actions">
+            <button type="button" className="btn btn-soft btn-small" onClick={onRotate} aria-label="Rotate 90° clockwise">
+              ↻ Rotate
+            </button>
+            <button type="button" className="btn btn-primary btn-small" onClick={() => onDone(crop)}>
+              Done
+            </button>
+          </div>
         </div>
 
         <canvas

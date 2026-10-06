@@ -21,3 +21,15 @@ export async function loadPhoto(file: File): Promise<HTMLCanvasElement> {
   bitmap.close()
   return canvas
 }
+
+/** A copy of `img` turned 90° clockwise. */
+export function rotateClockwise(img: HTMLCanvasElement): HTMLCanvasElement {
+  const out = document.createElement('canvas')
+  out.width = img.height
+  out.height = img.width
+  const ctx = out.getContext('2d')!
+  ctx.translate(out.width / 2, out.height / 2)
+  ctx.rotate(Math.PI / 2)
+  ctx.drawImage(img, -img.width / 2, -img.height / 2)
+  return out
+}
