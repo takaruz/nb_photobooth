@@ -9,7 +9,7 @@ import { DEFAULT_CROP, type Crop } from './lib/crop'
 import { canShareFiles, canvasToJpeg, downloadBlob, shareBlob } from './lib/exportJpeg'
 import { FILTERS } from './lib/filters'
 import { DEFAULT_LAYOUT, getLayout, LAYOUTS, PHOTO_COUNT, photoAt, PRINT_WIDTH } from './lib/layouts'
-import { loadPhoto } from './lib/loadImage'
+import { loadPhoto, rotateClockwise } from './lib/loadImage'
 import { PATTERNS } from './lib/patterns'
 import { renderSheet } from './lib/render'
 import type { Sticker } from './lib/stickers'
@@ -317,6 +317,10 @@ export default function App() {
           }}
           onMove={(dir, crop) => movePhoto(editing, dir, crop)}
           onReplace={() => pickSlot(editing)}
+          onRotate={() =>
+            // New id remounts the editor, so its framing starts fresh for the turned photo.
+            setSlot(editing, { id: nextId++, image: rotateClockwise(editingPhoto.image), crop: DEFAULT_CROP })
+          }
           onRemove={() => {
             setSlot(editing, null)
             setEditing(null)

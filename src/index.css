@@ -449,6 +449,11 @@ h1 {
   margin-bottom: 12px;
 }
 
+.modal-head-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .modal-head h2 {
   margin: 0;
   font-size: 1.1rem;
