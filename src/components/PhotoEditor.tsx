@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { applyAdjust, isNeutral, LIGHT_SLIDERS, NO_ADJUST, type Adjustments } from '../lib/adjust'
 import { clampCrop, cropSource, DEFAULT_CROP, MAX_ZOOM, type Crop } from '../lib/crop'
-import { filtered, type FilterId } from '../lib/filters'
+import { applyFilter, type FilterId } from '../lib/filters'
 import { drawPhoto } from '../lib/render'
-import type { Photo } from '../types'
+import type { Photo, PhotoEdits } from '../types'
 
 interface Props {
   photo: Photo
@@ -10,15 +11,18 @@ interface Props {
   count: number
   aspect: number
   filter: FilterId
-  onDone: (crop: Crop) => void
-  onMove: (dir: -1 | 1, crop: Crop) => void
+  onDone: (edits: PhotoEdits) => void
+  onMove: (dir: -1 | 1, edits: PhotoEdits) => void
   onReplace: () => void
   onRemove: () => void
-  onRotate: () => void
+  onRotate: (adjust: Adjustments) => void
 }
 
 // About 2x the print cell size, so it stays sharp on retina screens.
 const EDIT_W = 1040
+
+const formatValue = (key: keyof Adjustments, v: number) =>
+  key === 'exposure' ? `${v > 0 ? '+' : ''}${v.toFixed(2)}` : `${v > 0 ? '+' : ''}${v}`
 
 export function PhotoEditor({
   photo,
@@ -34,10 +38,14 @@ export function PhotoEditor({
 }: Props) {
   const img = photo.image
   const [crop, setCrop] = useState(photo.crop)
+  const [adjust, setAdjust] = useState(photo.adjust)
+  const [tab, setTab] = useState<'frame' | 'light'>('frame')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
 
+  const edits = { crop, adjust }
   const update = (fn: (c: Crop) => Crop) => setCrop((prev) => clampCrop(img, aspect, fn(prev)))
+  const setLight = (key: keyof Adjustments, value: number) => setAdjust((prev) => ({ ...prev, [key]: value }))
 
   /** Shift the crop so the image follows a drag of (dx, dy) screen pixels. */
   const pan = (c: Crop, dx: number, dy: number): Crop => {
@@ -46,6 +54,7 @@ export function PhotoEditor({
     return { ...c, cx: c.cx - (dx * k) / img.width, cy: c.cy - (dy * k) / img.height }
   }
 
+  // Light + filter are applied to just the visible crop, so slider drags stay smooth.
   useEffect(() => {
     const canvas = canvasRef.current!
     const h = Math.round(EDIT_W / aspect)
@@ -53,8 +62,10 @@ export function PhotoEditor({
     canvas.height = h
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
-    drawPhoto(ctx, filtered(img, filter), crop, { x: 0, y: 0, w: EDIT_W, h })
-  }, [img, crop, aspect, filter])
+    drawPhoto(ctx, img, crop, { x: 0, y: 0, w: EDIT_W, h })
+    applyAdjust(canvas, adjust)
+    applyFilter(canvas, filter)
+  }, [img, crop, adjust, aspect, filter])
 
   // Wheel zoom (desktop) needs a non-passive listener to stop the page scrolling.
   useEffect(() => {
@@ -68,9 +79,9 @@ export function PhotoEditor({
   }, [img, aspect])
 
   // Lock page scroll behind the sheet; Escape closes it.
-  const closeRef = useRef(() => onDone(crop))
+  const closeRef = useRef(() => onDone(edits))
   useEffect(() => {
-    closeRef.current = () => onDone(crop)
+    closeRef.current = () => onDone({ crop, adjust })
   })
   useEffect(() => {
     const prevOverflow = document.body.style.overflow
@@ -116,7 +127,7 @@ export function PhotoEditor({
   }
 
   return (
-    <div className="modal-backdrop" onClick={() => onDone(crop)}>
+    <div className="modal-backdrop" onClick={() => onDone(edits)}>
       <div
         className="modal"
         role="dialog"
@@ -127,10 +138,15 @@ export function PhotoEditor({
         <div className="modal-head">
           <h2>Photo {index + 1}</h2>
           <div className="modal-head-actions">
-            <button type="button" className="btn btn-soft btn-small" onClick={onRotate} aria-label="Rotate 90° clockwise">
+            <button
+              type="button"
+              className="btn btn-soft btn-small"
+              onClick={() => onRotate(adjust)}
+              aria-label="Rotate 90° clockwise"
+            >
               ↻ Rotate
             </button>
-            <button type="button" className="btn btn-primary btn-small" onClick={() => onDone(crop)}>
+            <button type="button" className="btn btn-primary btn-small" onClick={() => onDone(edits)}>
               Done
             </button>
           </div>
@@ -140,50 +156,91 @@ export function PhotoEditor({
           ref={canvasRef}
           className="editor-canvas"
           // Cap the height so tall (portrait) cells still leave room for the controls.
-          style={{ width: `min(100%, calc(48vh * ${aspect}))` }}
+          style={{ width: `min(100%, calc(42vh * ${aspect}))` }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         />
-        <p className="hint">Drag to move · pinch or slide to zoom</p>
 
-        <label className="zoom">
-          <span>Zoom</span>
-          <input
-            type="range"
-            min={1}
-            max={MAX_ZOOM}
-            step={0.01}
-            value={crop.zoom}
-            onChange={(e) => update((c) => ({ ...c, zoom: Number(e.target.value) }))}
-          />
-        </label>
-
-        <div className="editor-row">
-          <button type="button" className="btn btn-soft" disabled={index === 0} onClick={() => onMove(-1, crop)}>
-            ↑ Move up
+        <div className="tabs" role="tablist" aria-label="Edit">
+          <button type="button" role="tab" aria-selected={tab === 'frame'} onClick={() => setTab('frame')}>
+            Frame
           </button>
-          <button
-            type="button"
-            className="btn btn-soft"
-            disabled={index === count - 1}
-            onClick={() => onMove(1, crop)}
-          >
-            ↓ Move down
+          <button type="button" role="tab" aria-selected={tab === 'light'} onClick={() => setTab('light')}>
+            Light{!isNeutral(adjust) && <span className="tab-dot" aria-label="(edited)" />}
           </button>
         </div>
-        <div className="editor-row">
-          <button type="button" className="btn btn-soft" onClick={() => update(() => DEFAULT_CROP)}>
-            Reset
-          </button>
-          <button type="button" className="btn btn-soft" onClick={onReplace}>
-            Replace
-          </button>
-          <button type="button" className="btn btn-danger" onClick={onRemove}>
-            Remove
-          </button>
-        </div>
+
+        {tab === 'frame' ? (
+          <div role="tabpanel">
+            <p className="hint">Drag to move · pinch or slide to zoom</p>
+            <label className="zoom">
+              <span>Zoom</span>
+              <input
+                type="range"
+                min={1}
+                max={MAX_ZOOM}
+                step={0.01}
+                value={crop.zoom}
+                onChange={(e) => update((c) => ({ ...c, zoom: Number(e.target.value) }))}
+              />
+            </label>
+
+            <div className="editor-row">
+              <button type="button" className="btn btn-soft" disabled={index === 0} onClick={() => onMove(-1, edits)}>
+                ↑ Move up
+              </button>
+              <button
+                type="button"
+                className="btn btn-soft"
+                disabled={index === count - 1}
+                onClick={() => onMove(1, edits)}
+              >
+                ↓ Move down
+              </button>
+            </div>
+            <div className="editor-row">
+              <button type="button" className="btn btn-soft" onClick={() => update(() => DEFAULT_CROP)}>
+                Reset
+              </button>
+              <button type="button" className="btn btn-soft" onClick={onReplace}>
+                Replace
+              </button>
+              <button type="button" className="btn btn-danger" onClick={onRemove}>
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div role="tabpanel" className="light">
+            {LIGHT_SLIDERS.map(({ key, label, min, max, step }) => (
+              // Double-click / double-tap a slider to put it back to 0, like Lightroom.
+              <label key={key} className="light-row" onDoubleClick={() => setLight(key, 0)}>
+                <span className="light-label">{label}</span>
+                <output className="light-value">{formatValue(key, adjust[key])}</output>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={adjust[key]}
+                  onChange={(e) => setLight(key, Number(e.target.value))}
+                />
+              </label>
+            ))}
+            <div className="editor-row">
+              <button
+                type="button"
+                className="btn btn-soft"
+                disabled={isNeutral(adjust)}
+                onClick={() => setAdjust(NO_ADJUST)}
+              >
+                Reset light
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

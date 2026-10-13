@@ -1,6 +1,6 @@
 import type { Photo, SheetStyle } from '../types'
 import { cropSource, type Crop } from './crop'
-import { filtered } from './filters'
+import { developed } from './adjust'
 import { getLayout, PRINT_HEIGHT, PRINT_WIDTH, type CaptionBox, type Rect } from './layouts'
 import { drawPattern } from './patterns'
 import { drawStickers, type Sticker } from './stickers'
@@ -100,7 +100,7 @@ export function renderSheet(
 
   for (const cell of layout.cells) {
     const photo = photos[cell.photo]
-    if (photo) drawPhoto(ctx, filtered(photo.image, style.filter), photo.crop, cell.rect)
+    if (photo) drawPhoto(ctx, developed(photo.image, photo.adjust, style.filter), photo.crop, cell.rect)
     else if (opts.placeholders) drawPlaceholder(ctx, cell.rect, cell.photo + 1, dark)
   }
 

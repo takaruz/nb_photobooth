@@ -53,22 +53,3 @@ export function applyFilter(canvas: HTMLCanvasElement, id: FilterId) {
   for (let i = 0; i < d.length; i += 4) fn(d, i)
   ctx.putImageData(data, 0, 0)
 }
-
-// One filtered copy per photo: keeping every filter around would blow past iOS canvas memory.
-const cache = new WeakMap<HTMLCanvasElement, { id: FilterId; canvas: HTMLCanvasElement }>()
-
-/** `img` with filter `id` applied (cached). */
-export function filtered(img: HTMLCanvasElement, id: FilterId): HTMLCanvasElement {
-  if (id === 'none') return img
-  const hit = cache.get(img)
-  if (hit?.id === id) return hit.canvas
-  if (hit) hit.canvas.width = 0 // release the old copy's memory right away
-
-  const canvas = document.createElement('canvas')
-  canvas.width = img.width
-  canvas.height = img.height
-  canvas.getContext('2d')!.drawImage(img, 0, 0)
-  applyFilter(canvas, id)
-  cache.set(img, { id, canvas })
-  return canvas
-}

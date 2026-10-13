@@ -5,7 +5,8 @@ import { PhotoEditor } from './components/PhotoEditor'
 import { SlotPicker } from './components/SlotPicker'
 import { StickerEditor } from './components/StickerEditor'
 import { DEFAULT_CAPTION, StyleControls } from './components/StyleControls'
-import { DEFAULT_CROP, type Crop } from './lib/crop'
+import { NO_ADJUST } from './lib/adjust'
+import { DEFAULT_CROP } from './lib/crop'
 import { canShareFiles, canvasToJpeg, downloadBlob, shareBlob } from './lib/exportJpeg'
 import { FILTERS } from './lib/filters'
 import { DEFAULT_LAYOUT, getLayout, LAYOUTS, PHOTO_COUNT, photoAt, PRINT_WIDTH } from './lib/layouts'
@@ -13,7 +14,7 @@ import { loadPhoto, rotateClockwise } from './lib/loadImage'
 import { PATTERNS } from './lib/patterns'
 import { renderSheet } from './lib/render'
 import type { Sticker } from './lib/stickers'
-import type { Photo, SheetStyle } from './types'
+import type { Photo, PhotoEdits, SheetStyle } from './types'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -135,7 +136,7 @@ export default function App() {
       slots.map(async (slot, k) => {
         try {
           const image = await loadPhoto(files[k])
-          setSlot(slot, { id: nextId++, image, crop: DEFAULT_CROP })
+          setSlot(slot, { id: nextId++, image, crop: DEFAULT_CROP, adjust: NO_ADJUST })
         } catch (e) {
           setError((e as Error).message)
         } finally {
@@ -179,13 +180,13 @@ export default function App() {
     if (index >= 0) selectSlot(index)
   }
 
-  const setCrop = (index: number, crop: Crop) =>
-    setPhotos((prev) => prev.map((p, i) => (i === index && p ? { ...p, crop } : p)))
+  const setEdits = (index: number, edits: PhotoEdits) =>
+    setPhotos((prev) => prev.map((p, i) => (i === index && p ? { ...p, ...edits } : p)))
 
-  function movePhoto(index: number, dir: -1 | 1, crop: Crop) {
+  function movePhoto(index: number, dir: -1 | 1, edits: PhotoEdits) {
     const to = index + dir
     setPhotos((prev) => {
-      const next = prev.map((p, i) => (i === index && p ? { ...p, crop } : p))
+      const next = prev.map((p, i) => (i === index && p ? { ...p, ...edits } : p))
       ;[next[index], next[to]] = [next[to], next[index]]
       return next
     })
@@ -311,15 +312,21 @@ export default function App() {
           count={PHOTO_COUNT}
           aspect={layout.aspect}
           filter={style.filter}
-          onDone={(crop) => {
-            setCrop(editing, crop)
+          onDone={(edits) => {
+            setEdits(editing, edits)
             setEditing(null)
           }}
-          onMove={(dir, crop) => movePhoto(editing, dir, crop)}
+          onMove={(dir, edits) => movePhoto(editing, dir, edits)}
           onReplace={() => pickSlot(editing)}
-          onRotate={() =>
-            // New id remounts the editor, so its framing starts fresh for the turned photo.
-            setSlot(editing, { id: nextId++, image: rotateClockwise(editingPhoto.image), crop: DEFAULT_CROP })
+          onRotate={(adjust) =>
+            // New id remounts the editor, so its framing starts fresh for the turned photo;
+            // light settings don't depend on orientation, so they carry over.
+            setSlot(editing, {
+              id: nextId++,
+              image: rotateClockwise(editingPhoto.image),
+              crop: DEFAULT_CROP,
+              adjust,
+            })
           }
           onRemove={() => {
             setSlot(editing, null)

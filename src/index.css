@@ -607,3 +607,67 @@ h1 {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Photo editor tabs + Light panel */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--soft);
+}
+
+.tabs button {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabs button[aria-selected='true'] {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(30, 70, 110, 0.15);
+}
+
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--focus);
+}
+
+.light {
+  margin-top: 6px;
+}
+
+.light-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  row-gap: 2px;
+  padding: 6px 0;
+  font-size: 0.9rem;
+}
+
+.light-value {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.light-row input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--focus);
+}

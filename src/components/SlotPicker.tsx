@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
-import { filtered, type FilterId } from '../lib/filters'
+import { developed } from '../lib/adjust'
+import type { FilterId } from '../lib/filters'
 import { drawPhoto } from '../lib/render'
 import type { Photo } from '../types'
 
@@ -13,7 +14,7 @@ interface Props {
 
 const THUMB_W = 208
 
-/** Thumbnail drawn with the photo's crop and filter, so it matches the print. */
+/** Thumbnail drawn with the photo's crop, light and filter, so it matches the print. */
 function Thumb({ photo, aspect, filter }: { photo: Photo; aspect: number; filter: FilterId }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -23,7 +24,7 @@ function Thumb({ photo, aspect, filter }: { photo: Photo; aspect: number; filter
     canvas.height = h
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
-    drawPhoto(ctx, filtered(photo.image, filter), photo.crop, { x: 0, y: 0, w: THUMB_W, h })
+    drawPhoto(ctx, developed(photo.image, photo.adjust, filter), photo.crop, { x: 0, y: 0, w: THUMB_W, h })
   }, [photo, aspect, filter])
   return <canvas ref={ref} />
 }
