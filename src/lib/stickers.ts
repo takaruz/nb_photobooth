@@ -1,5 +1,7 @@
 import glassesGray from '../assets/stickers/pixel-glasses-gray.png'
 import glassesWhite from '../assets/stickers/pixel-glasses-white.png'
+import glassesDot from '../assets/stickers/pixel-glasses-dot.png'
+import glassesChecker from '../assets/stickers/pixel-glasses-checker.png'
 import type { Layout } from './layouts'
 
 /** A sticker is either an emoji or a (pixel-art) image. */
@@ -24,6 +26,8 @@ const EMOJI = [
 export const STICKERS: StickerDef[] = [
   { key: 'pixel-glasses-gray', label: 'Pixel sunglasses', image: pixelImage(glassesGray) },
   { key: 'pixel-glasses-white', label: 'Pixel sunglasses with white glints', image: pixelImage(glassesWhite) },
+  { key: 'pixel-glasses-dot', label: 'Pixel sunglasses with gray glints', image: pixelImage(glassesDot) },
+  { key: 'pixel-glasses-checker', label: 'Pixel sunglasses with checkered glints', image: pixelImage(glassesChecker) },
   ...EMOJI.map((emoji) => ({ key: emoji, label: emoji, emoji })),
 ]
 
