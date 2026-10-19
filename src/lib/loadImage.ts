@@ -1,8 +1,9 @@
 // Phone photos can be 12–48 MP; keeping four of those decoded crashes mobile Safari.
 // Downscale once on load — 1600 px is plenty for a 520x370 px print slot.
-const MAX_SIDE = 1600
+// Single-photo mode passes a larger limit since the photo is exported at its own size.
+export const MAX_SIDE = 1600
 
-export async function loadPhoto(file: File): Promise<HTMLCanvasElement> {
+export async function loadPhoto(file: File, maxSide = MAX_SIDE): Promise<HTMLCanvasElement> {
   let bitmap: ImageBitmap
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
@@ -10,7 +11,7 @@ export async function loadPhoto(file: File): Promise<HTMLCanvasElement> {
     throw new Error(`Can't read "${file.name}". Try a JPG or PNG photo.`)
   }
 
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height))
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(bitmap.width * scale)
   canvas.height = Math.round(bitmap.height * scale)

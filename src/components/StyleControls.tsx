@@ -29,12 +29,14 @@ const FRAME_COLORS = [
 
 interface Props {
   style: SheetStyle
+  /** False when the output has no frame or caption (full-bleed / original shape). */
+  framed?: boolean
   /** First photo, used to preview filters. */
   sample: HTMLCanvasElement | null
   onChange: (patch: Partial<SheetStyle>) => void
 }
 
-export function StyleControls({ style, sample, onChange: set }: Props) {
+export function StyleControls({ style, framed = true, sample, onChange: set }: Props) {
   const isPreset = FRAME_COLORS.some((c) => c.value === style.frameColor)
 
   return (
@@ -44,6 +46,8 @@ export function StyleControls({ style, sample, onChange: set }: Props) {
       <h3 className="field-label">Filter</h3>
       <FilterPicker value={style.filter} sample={sample} onChange={(filter) => set({ filter })} />
 
+      {framed && (
+        <>
       <h3 className="field-label">Frame color</h3>
       <div className="swatches" role="group" aria-label="Frame color">
         {FRAME_COLORS.map((c) => (
@@ -103,6 +107,8 @@ export function StyleControls({ style, sample, onChange: set }: Props) {
         <input type="checkbox" checked={style.showDate} onChange={(e) => set({ showDate: e.target.checked })} />
         <span>Show date</span>
       </label>
+        </>
+      )}
     </section>
   )
 }
