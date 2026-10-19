@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import type { Layout } from '../lib/layouts'
 import {
   defaultSize,
@@ -24,7 +24,11 @@ const HIT_PAD = 24
 let nextId = 1
 
 export function StickerEditor({ layout, base, stickers: initial, onDone }: Props) {
-  const area = layout.stickerArea
+  // Work in 4x6 print units (sticker sizes are stored in them), even when the sheet
+  // is another size: the canvas shows the sticker area divided by the layout's sticker scale.
+  const src = layout.stickerArea
+  const k = layout.stickerScale
+  const area = useMemo(() => ({ w: src.w / k, h: src.h / k }), [src, k])
   const [stickers, setStickers] = useState(initial)
   const [selected, setSelected] = useState<number | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -40,7 +44,7 @@ export function StickerEditor({ layout, base, stickers: initial, onDone }: Props
     canvas.width = area.w
     canvas.height = area.h
     const ctx = canvas.getContext('2d')!
-    ctx.drawImage(base, area.x, area.y, area.w, area.h, 0, 0, area.w, area.h)
+    ctx.drawImage(base, src.x, src.y, src.w, src.h, 0, 0, area.w, area.h)
     for (const s of stickers) drawSticker(ctx, s, s.x * area.w, s.y * area.h)
 
     if (current) {
@@ -54,7 +58,7 @@ export function StickerEditor({ layout, base, stickers: initial, onDone }: Props
       ctx.strokeRect(-hw - 10, -hh - 10, hw * 2 + 20, hh * 2 + 20)
       ctx.restore()
     }
-  }, [base, area, stickers, current])
+  }, [base, src, area, stickers, current])
 
   // Lock page scroll behind the sheet; Escape closes it.
   const closeRef = useRef(() => onDone(stickers))

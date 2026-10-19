@@ -671,3 +671,14 @@ h1 {
   width: 100%;
   accent-color: var(--focus);
 }
+
+/* Mode toggle + single-photo slot */
+
+.mode-tabs {
+  margin: 0 0 14px;
+}
+
+.slots-one {
+  grid-template-columns: minmax(0, 280px);
+  justify-content: center;
+}

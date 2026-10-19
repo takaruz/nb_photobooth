@@ -136,7 +136,7 @@ export function PhotoEditor({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-head">
-          <h2>Photo {index + 1}</h2>
+          <h2>{count > 1 ? `Photo ${index + 1}` : 'Photo'}</h2>
           <div className="modal-head-actions">
             <button
               type="button"
@@ -187,6 +187,7 @@ export function PhotoEditor({
               />
             </label>
 
+            {count > 1 && (
             <div className="editor-row">
               <button type="button" className="btn btn-soft" disabled={index === 0} onClick={() => onMove(-1, edits)}>
                 ↑ Move up
@@ -200,6 +201,7 @@ export function PhotoEditor({
                 ↓ Move down
               </button>
             </div>
+            )}
             <div className="editor-row">
               <button type="button" className="btn btn-soft" onClick={() => update(() => DEFAULT_CROP)}>
                 Reset

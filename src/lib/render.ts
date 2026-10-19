@@ -1,7 +1,7 @@
 import type { Photo, SheetStyle } from '../types'
 import { cropSource, type Crop } from './crop'
 import { developed } from './adjust'
-import { getLayout, PRINT_HEIGHT, PRINT_WIDTH, type CaptionBox, type Rect } from './layouts'
+import type { CaptionBox, Layout, Rect } from './layouts'
 import { drawPattern } from './patterns'
 import { drawStickers, type Sticker } from './stickers'
 
@@ -79,24 +79,25 @@ function drawCaption(
   ctx.restore()
 }
 
-/** Render the full 4x6 sheet (1200x1800) onto `canvas`. */
+/** Render the sheet onto `canvas`, sized from the layout (1200x1800 for 4x6). */
 export function renderSheet(
   canvas: HTMLCanvasElement,
+  layout: Layout,
   photos: (Photo | null)[],
   style: SheetStyle,
   opts: RenderOptions,
 ) {
-  const layout = getLayout(style.layout)
+  const { width, height } = layout
   const dark = isDark(style.frameColor)
 
-  canvas.width = PRINT_WIDTH
-  canvas.height = PRINT_HEIGHT
+  canvas.width = width
+  canvas.height = height
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingQuality = 'high'
 
   ctx.fillStyle = style.frameColor
-  ctx.fillRect(0, 0, PRINT_WIDTH, PRINT_HEIGHT)
-  drawPattern(ctx, style.pattern, PRINT_WIDTH, PRINT_HEIGHT, dark, layout.panels)
+  ctx.fillRect(0, 0, width, height)
+  drawPattern(ctx, style.pattern, width, height, dark, layout.panels)
 
   for (const cell of layout.cells) {
     const photo = photos[cell.photo]
@@ -109,12 +110,13 @@ export function renderSheet(
   if (opts.stickers) drawStickers(ctx, opts.stickers, layout)
 
   // Drawn last so stickers never hide where to cut.
-  if (layout.cutLine) drawCutGuide(ctx, dark)
+  if (layout.cutLine) drawCutGuide(ctx, layout, dark)
 }
 
 /** Dashed cut guide down the middle, with solid ends to line up the scissors. */
-function drawCutGuide(ctx: CanvasRenderingContext2D, dark: boolean) {
-  const mid = PRINT_WIDTH / 2
+function drawCutGuide(ctx: CanvasRenderingContext2D, layout: Layout, dark: boolean) {
+  const mid = layout.width / 2
+  const bottom = layout.height
   const END = 40
   ctx.save()
   ctx.strokeStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.3)'
@@ -122,8 +124,8 @@ function drawCutGuide(ctx: CanvasRenderingContext2D, dark: boolean) {
   ctx.beginPath()
   ctx.moveTo(mid, 0)
   ctx.lineTo(mid, END)
-  ctx.moveTo(mid, PRINT_HEIGHT - END)
-  ctx.lineTo(mid, PRINT_HEIGHT)
+  ctx.moveTo(mid, bottom - END)
+  ctx.lineTo(mid, bottom)
   ctx.stroke()
 
   // 3 px at 300 DPI ≈ 0.25 mm: visible on paper without being heavy.
@@ -131,7 +133,7 @@ function drawCutGuide(ctx: CanvasRenderingContext2D, dark: boolean) {
   ctx.setLineDash([18, 14])
   ctx.beginPath()
   ctx.moveTo(mid, END)
-  ctx.lineTo(mid, PRINT_HEIGHT - END)
+  ctx.lineTo(mid, bottom - END)
   ctx.stroke()
   ctx.restore()
 }

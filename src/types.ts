@@ -15,7 +15,10 @@ export interface Photo {
 export type PhotoEdits = Pick<Photo, 'crop' | 'adjust'>
 
 export interface SheetStyle {
+  /** Collage layout. */
   layout: LayoutId
+  /** Output for single-photo mode. */
+  singleLayout: LayoutId
   filter: FilterId
   frameColor: string
   pattern: PatternId

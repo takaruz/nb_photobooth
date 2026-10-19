@@ -31,7 +31,7 @@ function Thumb({ photo, aspect, filter }: { photo: Photo; aspect: number; filter
 
 export function SlotPicker({ photos, loading, aspect, filter, onSelect }: Props) {
   return (
-    <div className="slots" style={{ '--slot-aspect': aspect } as CSSProperties}>
+    <div className={photos.length === 1 ? 'slots slots-one' : 'slots'} style={{ '--slot-aspect': aspect } as CSSProperties}>
       {photos.map((photo, i) => (
         <button
           key={i}
@@ -45,7 +45,7 @@ export function SlotPicker({ photos, loading, aspect, filter, onSelect }: Props)
           ) : photo ? (
             <Thumb photo={photo} aspect={aspect} filter={filter} />
           ) : (
-            <span className="slot-label">+{i + 1}</span>
+            <span className="slot-label">{photos.length === 1 ? 'Choose a photo' : `+${i + 1}`}</span>
           )}
         </button>
       ))}
