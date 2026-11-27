@@ -16,7 +16,7 @@ import {
   ORIGINAL_ID,
   ORIGINAL_PREVIEW_SIDE,
   originalLayoutFor,
-  PHOTO_COUNT,
+  MAX_PHOTOS,
   photoAt,
   SINGLE_LAYOUTS,
   type Layout,
@@ -88,14 +88,16 @@ const canShare = canShareFiles()
 export default function App() {
   const [mode, setMode] = useState<Mode>(loadMode)
   // Both sets stay mounted, so switching modes never loses work.
-  const collage = usePhotoSet(PHOTO_COUNT, MAX_SIDE)
+  const collage = usePhotoSet(MAX_PHOTOS, MAX_SIDE)
   const single = usePhotoSet(1, SINGLE_MAX_SIDE)
   const set = mode === 'collage' ? collage : single
-  const { photos, stickers } = set
+  const { stickers } = set
   const isSingle = mode === 'single'
-  const count = photos.length
 
   const [style, setStyle] = useState<SheetStyle>(loadStyle)
+  // The set holds the most photos any layout takes; the active layout uses the first few.
+  const count = isSingle ? 1 : getLayout(style.layout).photoCount
+  const photos = useMemo(() => set.photos.slice(0, count), [set.photos, count])
   const [editing, setEditing] = useState<number | null>(null)
   /** Sheet rendered without stickers, shown as the backdrop while placing stickers. */
   const [stickerBase, setStickerBase] = useState<HTMLCanvasElement | null>(null)
@@ -137,7 +139,7 @@ export default function App() {
   }, [isSingle, style.layout, style.singleLayout, imgW, imgH])
 
   const is4x6 = exportLayout.id !== ORIGINAL_ID
-  const filled = set.filled
+  const filled = photos.filter(Boolean).length
   const ready = filled === count
   const missing = count - filled
   const exportBlob =
@@ -280,7 +282,7 @@ export default function App() {
     <main className="app">
       <header>
         <h1>NB Photobooth</h1>
-        <p className="sub">{isSingle ? '1 photo · 4×6 or original shape' : '4 photos · 4×6 print'}</p>
+        <p className="sub">{isSingle ? '1 photo · 4×6 or original shape' : `${count} photos · 4×6 print`}</p>
       </header>
 
       <InstallPrompt />
@@ -318,12 +320,12 @@ export default function App() {
             className="btn btn-primary"
             onClick={() => multiInputRef.current?.click()}
           >
-            {filled === 0 ? 'Choose 4 photos' : ready ? 'Choose new photos' : `Add ${missing} more`}
+            {filled === 0 ? `Choose ${count} photos` : ready ? 'Choose new photos' : `Add ${missing} more`}
           </button>
         )}
         <SlotPicker
           photos={photos}
-          loading={set.loading}
+          loading={set.loading.slice(0, count)}
           aspect={layout.aspect}
           filter={style.filter}
           onSelect={selectSlot}
@@ -383,6 +385,7 @@ export default function App() {
           index={editing}
           count={count}
           aspect={layout.aspect}
+          cellWidth={layout.cells[0].rect.w / layout.stickerScale}
           filter={style.filter}
           onDone={(edits) => {
             set.setEdits(editing, edits)
@@ -390,7 +393,7 @@ export default function App() {
           }}
           onMove={(dir, edits) => setEditing(set.movePhoto(editing, dir, edits))}
           onReplace={() => pickSlot(editing)}
-          onRotate={(adjust) => set.rotate(editing, adjust)}
+          onRotate={(edits) => set.rotate(editing, edits)}
           onRemove={() => {
             set.setSlot(editing, null)
             setEditing(null)

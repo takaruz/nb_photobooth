@@ -12,7 +12,12 @@ export function LayoutPicker({ title = 'Layout', options, value, onChange }: Pro
   return (
     <section className="card">
       <h2 className="card-title">{title}</h2>
-      <div className="layouts" role="radiogroup" aria-label={title}>
+      <div
+        className="layouts"
+        style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}
+        role="radiogroup"
+        aria-label={title}
+      >
         {options.map((layout) => (
           <button
             key={layout.id}

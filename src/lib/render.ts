@@ -3,7 +3,7 @@ import { cropSource, type Crop } from './crop'
 import { developed } from './adjust'
 import type { CaptionBox, Layout, Rect } from './layouts'
 import { drawPattern } from './patterns'
-import { drawStickers, type Sticker } from './stickers'
+import { drawCellStickers, drawStickers, type Sticker } from './stickers'
 
 export interface RenderOptions {
   date: string
@@ -101,7 +101,10 @@ export function renderSheet(
 
   for (const cell of layout.cells) {
     const photo = photos[cell.photo]
-    if (photo) drawPhoto(ctx, developed(photo.image, photo.adjust, style.filter), photo.crop, cell.rect)
+    if (photo) {
+      drawPhoto(ctx, developed(photo.image, photo.adjust, style.filter), photo.crop, cell.rect)
+      drawCellStickers(ctx, photo.stickers, cell.rect, layout.stickerScale)
+    }
     else if (opts.placeholders) drawPlaceholder(ctx, cell.rect, cell.photo + 1, dark)
   }
 

@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useStickerLayer } from '../hooks/useStickerLayer'
 import { applyAdjust, isNeutral, LIGHT_SLIDERS, NO_ADJUST, type Adjustments } from '../lib/adjust'
 import { clampCrop, cropSource, DEFAULT_CROP, MAX_ZOOM, type Crop } from '../lib/crop'
 import { applyFilter, type FilterId } from '../lib/filters'
 import { drawPhoto } from '../lib/render'
 import type { Photo, PhotoEdits } from '../types'
+import type { Sticker } from '../lib/stickers'
+import { StickerControls } from './StickerControls'
 
 interface Props {
   photo: Photo
   index: number
   count: number
   aspect: number
+  /** Width of the photo's cell in print units (stickers are sized in these). */
+  cellWidth: number
   filter: FilterId
   onDone: (edits: PhotoEdits) => void
   onMove: (dir: -1 | 1, edits: PhotoEdits) => void
   onReplace: () => void
   onRemove: () => void
-  onRotate: (adjust: Adjustments) => void
+  onRotate: (edits: Pick<PhotoEdits, 'adjust' | 'stickers'>) => void
 }
 
 // About 2x the print cell size, so it stays sharp on retina screens.
@@ -29,6 +34,7 @@ export function PhotoEditor({
   index,
   count,
   aspect,
+  cellWidth,
   filter,
   onDone,
   onMove,
@@ -39,11 +45,12 @@ export function PhotoEditor({
   const img = photo.image
   const [crop, setCrop] = useState(photo.crop)
   const [adjust, setAdjust] = useState(photo.adjust)
-  const [tab, setTab] = useState<'frame' | 'light'>('frame')
+  const [stickers, setStickers] = useState<Sticker[]>(photo.stickers)
+  const [tab, setTab] = useState<'frame' | 'light' | 'sticker'>('frame')
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
 
-  const edits = { crop, adjust }
+  const edits = { crop, adjust, stickers }
   const update = (fn: (c: Crop) => Crop) => setCrop((prev) => clampCrop(img, aspect, fn(prev)))
   const setLight = (key: keyof Adjustments, value: number) => setAdjust((prev) => ({ ...prev, [key]: value }))
 
@@ -54,18 +61,34 @@ export function PhotoEditor({
     return { ...c, cx: c.cx - (dx * k) / img.width, cy: c.cy - (dy * k) / img.height }
   }
 
+  const editH = Math.round(EDIT_W / aspect)
+
   // Light + filter are applied to just the visible crop, so slider drags stay smooth.
-  useEffect(() => {
-    const canvas = canvasRef.current!
-    const h = Math.round(EDIT_W / aspect)
+  // Kept off-screen so moving a sticker doesn't redo them.
+  const developedCrop = useMemo(() => {
+    const canvas = document.createElement('canvas')
     canvas.width = EDIT_W
-    canvas.height = h
+    canvas.height = editH
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
-    drawPhoto(ctx, img, crop, { x: 0, y: 0, w: EDIT_W, h })
+    drawPhoto(ctx, img, crop, { x: 0, y: 0, w: EDIT_W, h: editH })
     applyAdjust(canvas, adjust)
     applyFilter(canvas, filter)
-  }, [img, crop, adjust, aspect, filter])
+    return canvas
+  }, [img, crop, adjust, editH, filter])
+
+  const layer = useStickerLayer(stickers, setStickers, canvasRef, EDIT_W / cellWidth, pointers)
+  const { draw } = layer
+
+  useEffect(() => {
+    const canvas = canvasRef.current!
+    canvas.width = EDIT_W
+    canvas.height = editH
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(developedCrop, 0, 0)
+    // The outline only shows while the Sticker tab is open.
+    draw(ctx, EDIT_W, editH, tab === 'sticker')
+  })
 
   // Wheel zoom (desktop) needs a non-passive listener to stop the page scrolling.
   useEffect(() => {
@@ -81,7 +104,7 @@ export function PhotoEditor({
   // Lock page scroll behind the sheet; Escape closes it.
   const closeRef = useRef(() => onDone(edits))
   useEffect(() => {
-    closeRef.current = () => onDone({ crop, adjust })
+    closeRef.current = () => onDone({ crop, adjust, stickers })
   })
   useEffect(() => {
     const prevOverflow = document.body.style.overflow
@@ -94,7 +117,7 @@ export function PhotoEditor({
     }
   }, [])
 
-  function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
+  function onCropPointerDown(e: PointerEvent<HTMLCanvasElement>) {
     try {
       e.currentTarget.setPointerCapture(e.pointerId)
     } catch {
@@ -103,7 +126,7 @@ export function PhotoEditor({
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
   }
 
-  function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
+  function onCropPointerMove(e: PointerEvent<HTMLCanvasElement>) {
     const pts = pointers.current
     const prev = pts.get(e.pointerId)
     if (!prev) return
@@ -122,9 +145,15 @@ export function PhotoEditor({
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
   }
 
-  function onPointerUp(e: PointerEvent<HTMLCanvasElement>) {
+  function onCropPointerUp(e: PointerEvent<HTMLCanvasElement>) {
     pointers.current.delete(e.pointerId)
   }
+
+  // On the Sticker tab the canvas moves stickers; otherwise it pans and zooms the photo.
+  const stickerTab = tab === 'sticker'
+  const onPointerDown = stickerTab ? layer.onPointerDown : onCropPointerDown
+  const onPointerMove = stickerTab ? layer.onPointerMove : onCropPointerMove
+  const onPointerUp = stickerTab ? layer.onPointerUp : onCropPointerUp
 
   return (
     <div className="modal-backdrop" onClick={() => onDone(edits)}>
@@ -141,7 +170,7 @@ export function PhotoEditor({
             <button
               type="button"
               className="btn btn-soft btn-small"
-              onClick={() => onRotate(adjust)}
+              onClick={() => onRotate({ adjust, stickers })}
               aria-label="Rotate 90° clockwise"
             >
               ↻ Rotate
@@ -169,6 +198,9 @@ export function PhotoEditor({
           </button>
           <button type="button" role="tab" aria-selected={tab === 'light'} onClick={() => setTab('light')}>
             Light{!isNeutral(adjust) && <span className="tab-dot" aria-label="(edited)" />}
+          </button>
+          <button type="button" role="tab" aria-selected={tab === 'sticker'} onClick={() => setTab('sticker')}>
+            Sticker{stickers.length > 0 && <span className="tab-dot" aria-label="(edited)" />}
           </button>
         </div>
 
@@ -213,6 +245,11 @@ export function PhotoEditor({
                 Remove
               </button>
             </div>
+          </div>
+        ) : tab === 'sticker' ? (
+          <div role="tabpanel">
+            <p className="hint">Drag to move · pinch to resize and rotate</p>
+            <StickerControls layer={layer} />
           </div>
         ) : (
           <div role="tabpanel" className="light">

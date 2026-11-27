@@ -2,9 +2,9 @@ import glassesGray from '../assets/stickers/pixel-glasses-gray.png'
 import glassesWhite from '../assets/stickers/pixel-glasses-white.png'
 import glassesDot from '../assets/stickers/pixel-glasses-dot.png'
 import glassesChecker from '../assets/stickers/pixel-glasses-checker.png'
-import type { Layout } from './layouts'
+import type { Layout, Rect } from './layouts'
 
-/** A sticker is either an emoji or a (pixel-art) image. */
+/** A sticker is either an emoji (any emoji can be used) or a (pixel-art) image. */
 export interface StickerDef {
   key: string
   label: string
@@ -18,21 +18,17 @@ function pixelImage(src: string) {
   return img
 }
 
-const EMOJI = [
-  '❤️', '💖', '⭐', '✨', '🌸', '🌈', '🎀', '🦋', '😎', '🥰', '😂', '👑',
-  '🎉', '🍓', '🐶', '🐱', '☁️', '🌙', '🔥', '💐', '📸', '💌', '🍀', '🫶',
-  '🤍', '🩵', '😃', '😆', '😉', '👶🏻', '🍼', '🐣', '🎅🏻', '👍',
-]
-
 export const STICKERS: StickerDef[] = [
   { key: 'pixel-glasses-gray', label: 'Pixel sunglasses', image: pixelImage(glassesGray) },
   { key: 'pixel-glasses-white', label: 'Pixel sunglasses with white glints', image: pixelImage(glassesWhite) },
   { key: 'pixel-glasses-dot', label: 'Pixel sunglasses with gray glints', image: pixelImage(glassesDot) },
   { key: 'pixel-glasses-checker', label: 'Pixel sunglasses with checkered glints', image: pixelImage(glassesChecker) },
-  ...EMOJI.map((emoji) => ({ key: emoji, label: emoji, emoji })),
 ]
 
 const byKey = new Map(STICKERS.map((d) => [d.key, d]))
+
+/** Image stickers are listed; any other key is an emoji and is drawn as text. */
+const defFor = (key: string): StickerDef => byKey.get(key) ?? { key, label: key, emoji: key }
 
 export interface Sticker {
   id: number
@@ -51,20 +47,19 @@ export const STICKER_MIN = 50
 export const STICKER_MAX = 600
 
 /** Default size for a new sticker: images (glasses) start wider than emoji. */
-export const defaultSize = (key: string) => (byKey.get(key)?.image ? 280 : 160)
+export const defaultSize = (key: string) => (defFor(key).image ? 280 : 160)
 
 const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
 
 /** Half width / half height of the sticker's box, before rotation. */
 export function stickerHalfSize(s: Sticker): [number, number] {
-  const img = byKey.get(s.key)?.image
+  const img = defFor(s.key).image
   if (img?.naturalWidth) return [s.size / 2, (s.size * img.naturalHeight) / img.naturalWidth / 2]
   return [s.size * 0.62, s.size * 0.62]
 }
 
 export function drawSticker(ctx: CanvasRenderingContext2D, s: Sticker, cx: number, cy: number) {
-  const def = byKey.get(s.key)
-  if (!def) return
+  const def = defFor(s.key)
   ctx.save()
   ctx.translate(cx, cy)
   ctx.rotate(s.rotation)
@@ -93,4 +88,17 @@ export function drawStickers(ctx: CanvasRenderingContext2D, stickers: Sticker[],
       drawSticker(ctx, scaled, a.x + offset + s.x * a.w, a.y + s.y * a.h)
     }
   }
+}
+
+/** A photo's own stickers: positioned relative to its cell and clipped to it. */
+export function drawCellStickers(ctx: CanvasRenderingContext2D, stickers: Sticker[], cell: Rect, scale: number) {
+  if (!stickers.length) return
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(cell.x, cell.y, cell.w, cell.h)
+  ctx.clip()
+  for (const s of stickers) {
+    drawSticker(ctx, scale === 1 ? s : { ...s, size: s.size * scale }, cell.x + s.x * cell.w, cell.y + s.y * cell.h)
+  }
+  ctx.restore()
 }
