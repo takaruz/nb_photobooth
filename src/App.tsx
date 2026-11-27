@@ -385,6 +385,7 @@ export default function App() {
           index={editing}
           count={count}
           aspect={layout.aspect}
+          cellWidth={layout.cells[0].rect.w / layout.stickerScale}
           filter={style.filter}
           onDone={(edits) => {
             set.setEdits(editing, edits)
@@ -392,7 +393,7 @@ export default function App() {
           }}
           onMove={(dir, edits) => setEditing(set.movePhoto(editing, dir, edits))}
           onReplace={() => pickSlot(editing)}
-          onRotate={(adjust) => set.rotate(editing, adjust)}
+          onRotate={(edits) => set.rotate(editing, edits)}
           onRemove={() => {
             set.setSlot(editing, null)
             setEditing(null)

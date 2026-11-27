@@ -24,7 +24,7 @@ export function usePhotoSet(count: number, maxSide: number) {
       slots.map(async (slot, k) => {
         try {
           const image = await loadPhoto(files[k], maxSide)
-          setSlot(slot, { id: nextId++, image, crop: DEFAULT_CROP, adjust: NO_ADJUST })
+          setSlot(slot, { id: nextId++, image, crop: DEFAULT_CROP, adjust: NO_ADJUST, stickers: [] })
         } catch (e) {
           setError((e as Error).message)
         } finally {
@@ -48,11 +48,11 @@ export function usePhotoSet(count: number, maxSide: number) {
     return to
   }
 
-  /** Turn the photo 90°; a new id remounts the editor so framing starts fresh, light carries over. */
-  function rotate(index: number, adjust: PhotoEdits['adjust']) {
+  /** Turn the photo 90°; a new id remounts the editor so framing starts fresh, light and stickers carry over. */
+  function rotate(index: number, edits: Pick<PhotoEdits, 'adjust' | 'stickers'>) {
     const photo = photos[index]
     if (!photo) return
-    setSlot(index, { id: nextId++, image: rotateClockwise(photo.image), crop: DEFAULT_CROP, adjust })
+    setSlot(index, { id: nextId++, image: rotateClockwise(photo.image), crop: DEFAULT_CROP, ...edits })
   }
 
   return {
