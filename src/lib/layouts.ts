@@ -95,6 +95,22 @@ const GRID_FOOTER = 260
 const GRID_PHOTO_W = (PRINT_WIDTH - GRID_PAD * 2 - GRID_GAP) / 2
 const GRID_PHOTO_H = (PRINT_HEIGHT - GRID_PAD - GRID_FOOTER - GRID_GAP) / 2
 
+// 8-photo strips: left margin, centre gap and right margin are all the same.
+const EIGHT_MARGIN = 40
+const EIGHT_PHOTO_W = (PRINT_WIDTH - EIGHT_MARGIN * 3) / 2
+const eightCells = Array.from({ length: PHOTO_COUNT * 2 }, (_, i) => {
+  const col = Math.floor(i / PHOTO_COUNT)
+  return {
+    photo: i,
+    rect: {
+      x: EIGHT_MARGIN + col * (EIGHT_PHOTO_W + EIGHT_MARGIN),
+      y: STRIP_PAD_TOP + (i % PHOTO_COUNT) * (STRIP_PHOTO_H + STRIP_GAP),
+      w: EIGHT_PHOTO_W,
+      h: STRIP_PHOTO_H,
+    },
+  }
+})
+
 const left = strip(0)
 const right = strip(HALF)
 
@@ -129,13 +145,15 @@ export const LAYOUTS: Layout[] = [
     stickerScale: 1,
     name: '8-photo strips',
     hint: 'Print as a full 4×6 photo: 8 different photos in two strips.',
-    cells: [...left.cells, ...right.cells.map((c) => ({ ...c, photo: c.photo + PHOTO_COUNT }))],
-    captions: [left.caption, right.caption],
+    cells: eightCells,
+    captions: [
+      { x: EIGHT_MARGIN, y: PRINT_HEIGHT - STRIP_FOOTER, w: PRINT_WIDTH - EIGHT_MARGIN * 2, h: STRIP_FOOTER, scale: 1.3 },
+    ],
     cutLine: false,
     panels: [FULL],
     stickerArea: FULL,
     stickerRepeat: [0],
-    aspect: STRIP_PHOTO_W / STRIP_PHOTO_H,
+    aspect: EIGHT_PHOTO_W / STRIP_PHOTO_H,
   },
   {
     id: 'grid',
