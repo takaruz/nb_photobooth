@@ -3,7 +3,7 @@
 Pick 4 photos from your phone and get a print-ready **4×6 in** JPG (1200×1800 px @ 300 DPI).
 
 - **Single photo mode:** toggle at the top to edit one photo (crop/zoom/rotate, light, filter, stickers) and export it as a framed 4×6, a full-bleed 4×6, or in its original shape (up to 3000 px). Each mode keeps its own photos.
-- **Layouts:** double strip (cut into 2 photo-booth strips), 2×2 grid, or strip + title card
+- **Layouts:** 8-photo strips (two strips of 4 different photos, no cut line), double strip (cut into 2 photo-booth strips), 2×2 grid, or strip + title card
 - **Edit:** drag / pinch to frame each photo, reorder, replace
 - **Style:** filters (B&W, sepia, warm, cool, fade), frame color + pattern (dots, stripes,
   gingham, hearts, film), caption, date
