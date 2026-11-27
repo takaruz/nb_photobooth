@@ -3,6 +3,8 @@ export const PRINT_WIDTH = 1200
 export const PRINT_HEIGHT = 1800
 export const DPI = 300
 export const PHOTO_COUNT = 4
+/** Most photos any collage layout takes. */
+export const MAX_PHOTOS = 8
 
 export interface Rect {
   x: number
@@ -20,6 +22,7 @@ export interface CaptionBox extends Rect {
 
 export type LayoutId =
   | 'double-strip'
+  | 'double-strip-8'
   | 'grid'
   | 'strip-panel'
   | 'single-framed'
@@ -115,6 +118,23 @@ export const LAYOUTS: Layout[] = [
     panels: [LEFT_HALF, RIGHT_HALF],
     stickerArea: LEFT_HALF,
     stickerRepeat: [0, HALF],
+    aspect: STRIP_PHOTO_W / STRIP_PHOTO_H,
+  },
+  {
+    id: 'double-strip-8',
+    width: PRINT_WIDTH,
+    height: PRINT_HEIGHT,
+    photoCount: PHOTO_COUNT * 2,
+    framed: true,
+    stickerScale: 1,
+    name: '8-photo strips',
+    hint: 'Print as a full 4×6 photo: 8 different photos in two strips.',
+    cells: [...left.cells, ...right.cells.map((c) => ({ ...c, photo: c.photo + PHOTO_COUNT }))],
+    captions: [left.caption, right.caption],
+    cutLine: false,
+    panels: [FULL],
+    stickerArea: FULL,
+    stickerRepeat: [0],
     aspect: STRIP_PHOTO_W / STRIP_PHOTO_H,
   },
   {
